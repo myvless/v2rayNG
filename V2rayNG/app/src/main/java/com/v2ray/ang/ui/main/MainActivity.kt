@@ -91,6 +91,13 @@ class MainActivity : HelperBaseComponentActivity() {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 机场模式：未登录面板时先走登录/注册页
+        if (!com.v2ray.ang.panel.PanelSession.isLoggedIn()) {
+            super.onCreate(savedInstanceState)
+            startActivity(Intent(this, com.v2ray.ang.ui.panel.PanelAuthActivity::class.java))
+            finish()
+            return
+        }
         super.onCreate(savedInstanceState)
         mainViewModel.onAction(MainAction.Initialize)
 

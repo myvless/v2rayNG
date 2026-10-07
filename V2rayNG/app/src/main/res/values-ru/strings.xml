@@ -565,4 +565,16 @@
     <string name="connection_test_empty_message">подробности отсутствуют</string>
     <string name="value_unknown">неизвестно</string>
 
+    <string name="panel_login_title">Panel Login</string>
+    <string name="panel_register_title">Panel Register</string>
+    <string name="panel_email">Email</string>
+    <string name="panel_password">Password</string>
+    <string name="panel_invite_code">Invite Code (optional)</string>
+    <string name="panel_btn_login">Login</string>
+    <string name="panel_btn_register">Register</string>
+    <string name="panel_btn_go_login">Already have an account? Login</string>
+    <string name="panel_btn_go_register">No account? Register</string>
+    <string name="panel_error_empty">Please fill in email and password</string>
+    <string name="panel_error_password_short">Password must be at least 8 characters</string>
+
 </resources>

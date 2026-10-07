@@ -559,4 +559,16 @@
     <string name="connection_test_empty_message">沒有詳細資訊</string>
     <string name="value_unknown">未知</string>
 
+    <string name="panel_login_title">機場登入</string>
+    <string name="panel_register_title">機場註冊</string>
+    <string name="panel_email">郵箱</string>
+    <string name="panel_password">密碼</string>
+    <string name="panel_invite_code">邀請碼（可選）</string>
+    <string name="panel_btn_login">登入</string>
+    <string name="panel_btn_register">註冊</string>
+    <string name="panel_btn_go_login">已有帳號？去登入</string>
+    <string name="panel_btn_go_register">沒有帳號？去註冊</string>
+    <string name="panel_error_empty">請填寫郵箱和密碼</string>
+    <string name="panel_error_password_short">密碼至少 8 位</string>
+
 </resources>

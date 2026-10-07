@@ -418,6 +418,13 @@ object AngConfigManager {
                 return null
             }
 
+            // 机场模式：仅保留 VMess 协议
+            if (com.v2ray.ang.panel.PanelConfig.VMESS_ONLY &&
+                config.configType != EConfigType.VMESS
+            ) {
+                return null
+            }
+
             // Apply filter
             if (subItem?.filter.isNotNullEmpty() && config.remarks.isNotNullEmpty()) {
                 val matched = Regex(pattern = subItem?.filter.orEmpty())

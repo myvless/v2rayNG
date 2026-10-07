@@ -559,4 +559,16 @@
     <string name="connection_test_empty_message">无详细信息</string>
     <string name="value_unknown">未知</string>
 
+    <string name="panel_login_title">机场登录</string>
+    <string name="panel_register_title">机场注册</string>
+    <string name="panel_email">邮箱</string>
+    <string name="panel_password">密码</string>
+    <string name="panel_invite_code">邀请码（可选）</string>
+    <string name="panel_btn_login">登录</string>
+    <string name="panel_btn_register">注册</string>
+    <string name="panel_btn_go_login">已有账号？去登录</string>
+    <string name="panel_btn_go_register">没有账号？去注册</string>
+    <string name="panel_error_empty">请填写邮箱和密码</string>
+    <string name="panel_error_password_short">密码至少 8 位</string>
+
 </resources>

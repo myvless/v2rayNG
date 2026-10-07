@@ -62,6 +62,10 @@
         </service>
 
         <activity
+            android:name=".ui.panel.PanelAuthActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".ui.main.MainActivity"
             android:exported="true"
             android:launchMode="singleTask">
