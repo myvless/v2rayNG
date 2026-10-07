@@ -7,13 +7,13 @@ plugins {
 
 android {
     namespace = "com.v2ray.ang"
-    compileSdk = 36
+    compileSdk = 37
     ndkVersion = "30.0.16248370"
 
     defaultConfig {
         applicationId = "com.v2ray.ang"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 750
         versionName = "2.3.10"
 
