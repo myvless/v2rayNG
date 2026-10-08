@@ -158,15 +158,27 @@ class AirportMainActivity : BaseComponentActivity() {
             LauncherManager.stopService(this)
             viewModel.refreshRunning()
         } else {
-            if (viewModel.uiState.value.nodes.none { it.isSelected }) {
-                // 未选中节点时提示先选节点（用 snackbar 逻辑太绕，直接选第一个）
+            // 确保有选中的节点（同步选择，避免异步未完成就启动服务）
+            var selected = com.v2ray.ang.handler.MmkvManager.getSelectServer()
+            if (selected.isNullOrEmpty()) {
                 val first = viewModel.uiState.value.nodes.firstOrNull()
-                if (first != null) viewModel.selectNode(first.guid)
+                if (first != null) {
+                    com.v2ray.ang.handler.MmkvManager.setSelectServer(first.guid)
+                    viewModel.selectNode(first.guid)
+                    selected = first.guid
+                }
+            }
+            if (selected.isNullOrEmpty()) {
+                android.widget.Toast.makeText(this, "请先选择节点", android.widget.Toast.LENGTH_SHORT).show()
+                return
             }
             val intent = VpnService.prepare(this)
             if (intent == null) {
                 LauncherManager.startService(this)
-                viewModel.refreshRunning()
+                // 延迟刷新状态，等服务启动
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    viewModel.refreshRunning()
+                }, 1000)
             } else {
                 requestVpnPermission.launch(intent)
             }
