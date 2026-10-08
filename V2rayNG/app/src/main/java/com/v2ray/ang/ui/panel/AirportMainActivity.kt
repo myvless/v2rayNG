@@ -24,17 +24,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -54,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.core.LauncherManager
@@ -117,7 +111,7 @@ class AirportMainActivity : BaseComponentActivity() {
                         NavigationBarItem(
                             selected = tabIndex == index,
                             onClick = { tabIndex = index },
-                            icon = { Icon(tab.icon, contentDescription = null) },
+                            icon = { Text(if (index == 0) "🌐" else if (index == 1) "🛒" else "👤", fontSize = 20.sp) },
                             label = { Text(tab.label) }
                         )
                     }
@@ -174,12 +168,12 @@ class AirportMainActivity : BaseComponentActivity() {
         }
     }
 
-    private data class BottomTab(val label: String, val icon: ImageVector)
+    private data class BottomTab(val label: String)
 
     private val bottomTabs = listOf(
-        BottomTab("节点", Icons.Filled.Home),
-        BottomTab("商店", Icons.Filled.ShoppingCart),
-        BottomTab("我的", Icons.Filled.Person)
+        BottomTab("节点"),
+        BottomTab("商店"),
+        BottomTab("我的")
     )
 }
 
@@ -239,7 +233,7 @@ private fun NodesTab(
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                     Spacer(modifier = Modifier.width(8.dp))
                 } else {
-                    Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Text("⟳", fontSize = 16.sp)
                     Spacer(modifier = Modifier.width(8.dp))
                 }
                 Text("更新订阅")
@@ -278,10 +272,10 @@ private fun NodesTab(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             if (node.isSelected) {
-                                Icon(
-                                    Icons.Filled.CheckCircle,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
+                                Text(
+                                    "✓",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontSize = 20.sp,
                                     modifier = Modifier.size(24.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
@@ -338,12 +332,7 @@ private fun ProfileTab(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(24.dp))
-        Icon(
-            Icons.Filled.Person,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
+        Text("👤", fontSize = 48.sp)
         Spacer(modifier = Modifier.height(12.dp))
         Text(state.email.ifBlank { "已登录" }, style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(24.dp))
