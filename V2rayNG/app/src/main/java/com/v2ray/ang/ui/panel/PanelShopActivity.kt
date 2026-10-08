@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
+import com.v2ray.ang.panel.PanelApi
+import com.v2ray.ang.panel.PanelConfig
 import com.v2ray.ang.ui.base.BaseComponentActivity
 
 /**
