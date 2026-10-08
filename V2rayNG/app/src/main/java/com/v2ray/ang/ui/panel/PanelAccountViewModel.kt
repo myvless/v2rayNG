@@ -11,7 +11,7 @@ import kotlinx.coroutines.withContext
 
 data class PanelAccountUiState(
     val email: String = "",
-    val userInfo: PanelApi.UserInfo = PanelApi.UserInfo(),
+    val userInfo: PanelUserInfo = PanelUserInfo(),
     val isLoading: Boolean = false
 )
 

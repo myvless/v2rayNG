@@ -1,5 +1,13 @@
 package com.v2ray.ang.panel
 
+data class PanelUserInfo(
+    val planName: String = "",
+    val expireDate: String = "",
+    val trafficUsed: String = "",
+    val trafficTotal: String = "",
+    val trafficPercent: Float = 0f
+)
+
 import com.tencent.mmkv.MMKV
 import com.v2ray.ang.util.LogUtil
 import kotlinx.coroutines.Dispatchers
@@ -201,22 +209,14 @@ object PanelApi {
         }
     }
 
-    data class UserInfo(
-        val planName: String = "",
-        val expireDate: String = "",
-        val trafficUsed: String = "",
-        val trafficTotal: String = "",
-        val trafficPercent: Float = 0f
-    )
-
-    suspend fun fetchUserInfo(): UserInfo = withContext(Dispatchers.IO) {
+    suspend fun fetchUserInfo(): PanelUserInfo = withContext(Dispatchers.IO) {
         try {
             val request = okhttp3.Request.Builder()
                 .url(PanelConfig.PANEL_BASE_URL + PanelConfig.PATH_USER)
                 .get()
                 .build()
             client.newCall(request).execute().use { resp ->
-                if (!resp.isSuccessful) return@withContext UserInfo()
+                if (!resp.isSuccessful) return@withContext PanelUserInfo()
                 val html = resp.body.string()
                 var used = ""
                 var total = ""
@@ -232,7 +232,7 @@ object PanelApi {
                 Regex("""到期[^<]{0,30}?(\d{4}-\d{2}-\d{2})""").find(html)?.let {
                     expire = it.groups[1]?.value ?: ""
                 }
-                UserInfo("", expire, used, total, percent.coerceIn(0f, 1f))
+                PanelUserInfo("", expire, used, total, percent.coerceIn(0f, 1f))
             }
         } catch (_: Exception) {
             UserInfo()
