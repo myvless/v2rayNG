@@ -11,7 +11,7 @@ android {
     ndkVersion = "30.0.16248370"
 
     defaultConfig {
-        applicationId = "com.v2ray.ang"
+        applicationId = "com.v2ray.ang.airport"
         minSdk = 24
         targetSdk = 37
         versionCode = 750
