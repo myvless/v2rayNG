@@ -11,6 +11,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -360,11 +362,13 @@ private fun NodesTab(
                 )
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(state.nodes, key = { it.guid }) { node ->
+                state.nodes.forEach { node ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
