@@ -385,21 +385,11 @@ private fun NodesTab(
                 )
             }
         } else {
-            val grouped = state.nodes.groupBy { it.subscriptionRemarks.ifBlank { "默认分组" } }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                grouped.forEach { (groupName, groupNodes) ->
-                    item(key = "header_$groupName") {
-                        Text(
-                            text = "$groupName (${groupNodes.size})",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                        )
-                    }
-                    items(groupNodes, key = { it.guid }) { node ->
+                items(state.nodes, key = { it.guid }) { node ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -445,7 +435,6 @@ private fun NodesTab(
                         }
                     }
                 }
-            }
         }
     }
 }
