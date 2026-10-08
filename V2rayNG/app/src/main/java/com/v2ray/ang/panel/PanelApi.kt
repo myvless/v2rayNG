@@ -9,6 +9,7 @@ import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.FormBody
 import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
@@ -298,7 +299,7 @@ object PanelApi {
 
     fun getCookieHeader(): String {
         return try {
-            val host = okhttp3.HttpUrl.parse(PanelConfig.PANEL_BASE_URL)?.host() ?: return ""
+            val host = PanelConfig.PANEL_BASE_URL.toHttpUrlOrNull()?.host ?: return ""
             val serialized = cookieStore.decodeString("cookies_${host}") ?: return ""
             serialized.split(";").joinToString("; ") { it.trim() }
         } catch (_: Exception) {
@@ -306,13 +307,4 @@ object PanelApi {
         }
     }
 
-    /**
-     * 获取面板域名的 cookie 字符串，用于 WebView 同步登录态
-     */
-    fun getCookieHeader(): String {
-        val serialized = cookieStore.decodeString("cookies_${PanelConfig.PANEL_HOST}")
-        if (serialized.isNullOrEmpty()) return ""
-        // MMKV 里存的是 "name=value;name=value" 格式，转成 Cookie 头格式
-        return serialized.split(";").joinToString("; ") { it.trim() }
-    }
 }
