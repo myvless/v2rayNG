@@ -105,15 +105,34 @@ class AirportMainViewModel(application: Application) : BaseViewModel(application
             }
             val count = withContext(Dispatchers.IO) {
                 PanelSession.saveSubscriptionUrl(subUrl)
+                ensurePanelSubscription(subUrl)
                 val result = AngConfigManager.updateConfigViaSubAll()
                 result.successCount
             }
             refreshNodes()
+            val nodeCount = withContext(Dispatchers.Default) {
+                MmkvManager.decodeAllServerList().size
+            }
             _uiState.value = _uiState.value.copy(
                 isBusy = false,
-                message = "订阅更新完成，${count} 个订阅成功"
+                message = if (nodeCount > 0) "订阅更新完成，共 ${nodeCount} 个节点" else "订阅更新完成，但未获取到节点"
             )
         }
+    }
+
+    /**
+     * 确保面板订阅已加入 v2rayNG 订阅列表（若尚未添加）
+     */
+    private fun ensurePanelSubscription(subUrl: String) {
+        val existing = MmkvManager.decodeSubscriptions()
+        if (existing.any { it.subscription.url == subUrl }) return
+        val item = com.v2ray.ang.dto.entities.SubscriptionItem().apply {
+            url = subUrl
+            autoUpdate = true
+            remarks = "机场订阅"
+        }
+        val guid = com.v2ray.ang.util.Utils.getUuid()
+        MmkvManager.encodeSubscription(guid, item)
     }
 
     fun logout(onDone: () -> Unit) {
