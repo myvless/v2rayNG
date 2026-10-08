@@ -29,6 +29,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.OutlinedTextField
@@ -137,8 +138,7 @@ class AirportMainActivity : com.v2ray.ang.ui.base.HelperBaseComponentActivity() 
                         onToggleVpn = { toggleVpn(state.isRunning) },
                         onRefresh = { viewModel.updateSubscription() },
                         onManualImport = { viewModel.importSubscription(it) },
-                        onTestReal = { viewModel.testRealDelay() },
-                        onSortMode = { viewModel.setSortMode(it) }
+                        onTestReal = { viewModel.testRealDelay() }
                     )
                     1 -> ShopTab()
                     2 -> ProfileTab(
@@ -217,8 +217,7 @@ private fun NodesTab(
     onToggleVpn: () -> Unit,
     onRefresh: () -> Unit,
     onManualImport: (String) -> Unit,
-    onTestReal: () -> Unit,
-    onSortMode: (SortMode) -> Unit
+    onTestReal: () -> Unit
 ) {
     var showImportDialog by remember { mutableStateOf(false) }
     var importUrl by remember { mutableStateOf("") }
@@ -287,30 +286,6 @@ private fun NodesTab(
             Text("节点列表（${state.nodes.size}）", style = MaterialTheme.typography.titleMedium)
             OutlinedButton(onClick = onTestReal, enabled = !state.isBusy) {
                 Text("真连接测速")
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        // 排序行
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("排序：", style = MaterialTheme.typography.bodySmall)
-            listOf(
-                SortMode.BY_NAME to "名称",
-                SortMode.BY_REAL_DELAY to "延迟"
-            ).forEach { (mode, label) ->
-                TextButton(
-                    onClick = { onSortMode(mode) },
-                    enabled = !state.isBusy
-                ) {
-                    Text(
-                        label,
-                        color = if (state.sortMode == mode) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = if (state.sortMode == mode) FontWeight.Bold else FontWeight.Normal
-                    )
-                }
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -386,7 +361,7 @@ private fun NodesTab(
             }
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(state.nodes, key = { it.guid }) { node ->
@@ -496,6 +471,37 @@ private fun ProfileTab(
         Text("👤", fontSize = 48.sp)
         Spacer(modifier = Modifier.height(12.dp))
         Text(state.email.ifBlank { "已登录" }, style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 账户详情卡片
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("账户详情", style = MaterialTheme.typography.titleSmall)
+                Spacer(modifier = Modifier.height(8.dp))
+                val info = state.userInfo
+                if (info.expireDate.isNotBlank()) {
+                    Text("到期时间：${info.expireDate}", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+                if (info.trafficUsed.isNotBlank() || info.trafficTotal.isNotBlank()) {
+                    Text(
+                        "流量：${info.trafficUsed} / ${info.trafficTotal}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = { info.trafficPercent },
+                        modifier = Modifier.fillMaxWidth().height(8.dp),
+                    )
+                } else {
+                    Text(
+                        "流量信息加载中...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(onClick = onUpdateSub, modifier = Modifier.fillMaxWidth(), enabled = !state.isBusy) {

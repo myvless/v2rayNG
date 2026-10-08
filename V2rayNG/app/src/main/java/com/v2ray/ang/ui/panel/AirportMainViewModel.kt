@@ -26,10 +26,6 @@ data class AirportNodeItem(
     val subscriptionRemarks: String = ""
 )
 
-enum class SortMode {
-    BY_NAME, BY_REAL_DELAY
-}
-
 data class AirportMainUiState(
     val nodes: List<AirportNodeItem> = emptyList(),
     val isRunning: Boolean = false,
@@ -37,7 +33,7 @@ data class AirportMainUiState(
     val isBusy: Boolean = false,
     val message: String? = null,
     val email: String = "",
-    val sortMode: SortMode = SortMode.BY_NAME
+    val userInfo: PanelApi.UserInfo = PanelApi.UserInfo()
 )
 
 class AirportMainViewModel(application: Application) : BaseViewModel(application) {
@@ -49,6 +45,14 @@ class AirportMainViewModel(application: Application) : BaseViewModel(application
         _uiState.value = _uiState.value.copy(email = PanelSession.getEmail())
         refreshNodes()
         refreshRunning()
+        refreshUserInfo()
+    }
+
+    fun refreshUserInfo() {
+        viewModelScope.launch {
+            val info = withContext(Dispatchers.IO) { PanelApi.fetchUserInfo() }
+            _uiState.value = _uiState.value.copy(userInfo = info)
+        }
     }
 
     fun refreshNodes() {
@@ -71,27 +75,9 @@ class AirportMainViewModel(application: Application) : BaseViewModel(application
                     subscriptionRemarks = subMap[config.subscriptionId] ?: "默认分组"
                 )
             }
-            val sorted = sortNodes(items, _uiState.value.sortMode)
             withContext(Dispatchers.Main) {
-                _uiState.value = _uiState.value.copy(nodes = sorted)
+                _uiState.value = _uiState.value.copy(nodes = items)
             }
-        }
-    }
-
-    fun setSortMode(mode: SortMode) {
-        _uiState.value = _uiState.value.copy(
-            sortMode = mode,
-            nodes = sortNodes(_uiState.value.nodes, mode)
-        )
-    }
-
-    private fun sortNodes(nodes: List<AirportNodeItem>, mode: SortMode): List<AirportNodeItem> {
-        return when (mode) {
-            SortMode.BY_NAME -> nodes.sortedBy { it.remarks }
-            SortMode.BY_REAL_DELAY -> nodes.sortedWith(compareBy(
-                { if (it.realDelayMs < 0) Long.MAX_VALUE else it.realDelayMs },
-                { it.remarks }
-            ))
         }
     }
 
@@ -146,7 +132,15 @@ class AirportMainViewModel(application: Application) : BaseViewModel(application
                 }
             }
             withContext(Dispatchers.Main) {
-                _uiState.value = _uiState.value.copy(message = "真连接延迟测试完成")
+                // 按延迟排序（未测到的排最后）
+                val sorted = _uiState.value.nodes.sortedWith(compareBy(
+                    { if (it.realDelayMs < 0) Long.MAX_VALUE else it.realDelayMs },
+                    { it.remarks }
+                ))
+                _uiState.value = _uiState.value.copy(
+                    nodes = sorted,
+                    message = "真连接延迟测试完成，已按延迟排序"
+                )
             }
         }
     }
