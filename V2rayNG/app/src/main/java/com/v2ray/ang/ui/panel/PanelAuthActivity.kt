@@ -76,17 +76,20 @@ class PanelAuthActivity : BaseComponentActivity() {
                 if (result is com.v2ray.ang.panel.PanelApi.ApiResult.Success) {
                     val subUrl = result.message
                     com.v2ray.ang.panel.PanelSession.saveSubscriptionUrl(subUrl)
-                    // 确保订阅已加入列表
-                    val existing = com.v2ray.ang.handler.MmkvManager.decodeSubscriptions()
-                    val hasPanel = existing.any { it.subscription.remarks == "面板订阅" }
-                    if (!hasPanel) {
-                        val subItem = com.v2ray.ang.dto.entities.SubscriptionItem().apply {
-                            remarks = "面板订阅"
-                            url = subUrl
-                        }
-                        val guid = java.util.UUID.randomUUID().toString()
-                        com.v2ray.ang.handler.MmkvManager.encodeSubscription(guid, subItem)
+                    // 清理所有旧订阅和节点，只保留面板订阅一个分组
+                    com.v2ray.ang.handler.MmkvManager.decodeSubscriptions().forEach {
+                        com.v2ray.ang.handler.MmkvManager.removeSubscription(it.guid)
                     }
+                    com.v2ray.ang.handler.MmkvManager.decodeAllServerList().forEach {
+                        com.v2ray.ang.handler.MmkvManager.removeServer(it)
+                    }
+                    // 加入面板订阅
+                    val subItem = com.v2ray.ang.dto.entities.SubscriptionItem().apply {
+                        remarks = "面板订阅"
+                        url = subUrl
+                    }
+                    val guid = java.util.UUID.randomUUID().toString()
+                    com.v2ray.ang.handler.MmkvManager.encodeSubscription(guid, subItem)
                     com.v2ray.ang.handler.AngConfigManager.updateConfigViaSubAll()
                 }
             } catch (_: Exception) { }

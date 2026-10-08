@@ -44,10 +44,12 @@ enum class MainDestination(@DrawableRes val iconRes: Int, @StringRes val labelRe
     Logcat(R.drawable.ic_logcat_24dp, R.string.title_logcat),
     CheckUpdate(R.drawable.ic_check_update_24dp, R.string.update_check_for_update),
     BackupRestore(R.drawable.ic_restore_24dp, R.string.title_configuration_backup_restore),
-    About(R.drawable.ic_about_24dp, R.string.title_about)
+    About(R.drawable.ic_about_24dp, R.string.title_about),
+    PanelAccount(R.drawable.ic_settings_24dp, R.string.app_name)
 }
 
 private val primaryDrawerItems = listOf(
+    MainDestination.PanelAccount,
     MainDestination.Subscriptions,
     MainDestination.PerAppProxy,
     MainDestination.Routing,
@@ -110,7 +112,10 @@ fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) ->
             drawerItems.forEachIndexed { index, item ->
                 if (index == primaryDrawerItems.size) AppDivider()
                 NavigationDrawerItem(
-                    label = { Text(stringResource(item.labelRes)) },
+                    label = { 
+                        if (item == MainDestination.PanelAccount) Text("我的账户")
+                        else Text(stringResource(item.labelRes)) 
+                    },
                     selected = false,
                     onClick = { onNavigate(item) },
                     icon = { Icon(painterResource(item.iconRes), contentDescription = null) },
