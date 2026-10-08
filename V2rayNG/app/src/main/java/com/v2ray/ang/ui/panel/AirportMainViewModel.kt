@@ -33,7 +33,7 @@ data class AirportMainUiState(
     val isBusy: Boolean = false,
     val message: String? = null,
     val email: String = "",
-    val userInfo: PanelApi.UserInfo = PanelApi.UserInfo()
+    val userInfo: PanelUserInfo = PanelUserInfo()
 )
 
 class AirportMainViewModel(application: Application) : BaseViewModel(application) {

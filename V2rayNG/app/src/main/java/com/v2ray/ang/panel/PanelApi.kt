@@ -1,12 +1,5 @@
 package com.v2ray.ang.panel
 
-data class PanelUserInfo(
-    val planName: String = "",
-    val expireDate: String = "",
-    val trafficUsed: String = "",
-    val trafficTotal: String = "",
-    val trafficPercent: Float = 0f
-)
 
 import com.tencent.mmkv.MMKV
 import com.v2ray.ang.util.LogUtil
@@ -19,6 +12,13 @@ import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
+data class PanelUserInfo(
+    val planName: String = "",
+    val expireDate: String = "",
+    val trafficUsed: String = "",
+    val trafficTotal: String = "",
+    val trafficPercent: Float = 0f
+)
 
 /**
  * 机场面板 API 客户端
@@ -235,7 +235,7 @@ object PanelApi {
                 PanelUserInfo("", expire, used, total, percent.coerceIn(0f, 1f))
             }
         } catch (_: Exception) {
-            UserInfo()
+            PanelUserInfo()
         }
     }
 
