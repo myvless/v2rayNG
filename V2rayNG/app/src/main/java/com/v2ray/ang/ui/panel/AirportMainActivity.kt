@@ -72,7 +72,7 @@ class AirportMainActivity : com.v2ray.ang.ui.base.HelperBaseComponentActivity() 
     private val requestVpnPermission =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (it.resultCode == Activity.RESULT_OK) {
-                viewModel.markConnecting()
+                viewModel.markConnecting(this)
                 LauncherManager.startService(this)
             } else {
                 android.widget.Toast.makeText(this, "需要VPN权限才能连接", android.widget.Toast.LENGTH_SHORT).show()
@@ -92,7 +92,7 @@ class AirportMainActivity : com.v2ray.ang.ui.base.HelperBaseComponentActivity() 
     override fun onResume() {
         super.onResume()
         viewModel.refreshNodes()
-        viewModel.refreshRunning()
+        viewModel.refreshRunning(this)
     }
 
     @Composable
@@ -137,7 +137,6 @@ class AirportMainActivity : com.v2ray.ang.ui.base.HelperBaseComponentActivity() 
                         onToggleVpn = { toggleVpn(state.isRunning) },
                         onRefresh = { viewModel.updateSubscription() },
                         onManualImport = { viewModel.importSubscription(it) },
-                        onTestTcp = { viewModel.testTcpDelay() },
                         onTestReal = { viewModel.testRealDelay() },
                         onSortMode = { viewModel.setSortMode(it) }
                     )
@@ -192,7 +191,7 @@ class AirportMainActivity : com.v2ray.ang.ui.base.HelperBaseComponentActivity() 
         try {
             val intent = VpnService.prepare(this)
             if (intent == null) {
-                viewModel.markConnecting()
+                viewModel.markConnecting(this)
                 LauncherManager.startService(this)
             } else {
                 requestVpnPermission.launch(intent)
@@ -218,7 +217,6 @@ private fun NodesTab(
     onToggleVpn: () -> Unit,
     onRefresh: () -> Unit,
     onManualImport: (String) -> Unit,
-    onTestTcp: () -> Unit,
     onTestReal: () -> Unit,
     onSortMode: (SortMode) -> Unit
 ) {
@@ -280,51 +278,51 @@ private fun NodesTab(
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        // 标题行
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("节点列表（${state.nodes.size}）", style = MaterialTheme.typography.titleMedium)
-            Row {
-                OutlinedButton(onClick = onTestTcp, enabled = !state.isBusy) {
-                    Text("TCP测速")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                OutlinedButton(onClick = onTestReal, enabled = !state.isBusy) {
-                    Text("真连接测速")
+            OutlinedButton(onClick = onTestReal, enabled = !state.isBusy) {
+                Text("真连接测速")
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        // 排序行
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("排序：", style = MaterialTheme.typography.bodySmall)
+            listOf(
+                SortMode.BY_NAME to "名称",
+                SortMode.BY_REAL_DELAY to "延迟"
+            ).forEach { (mode, label) ->
+                TextButton(
+                    onClick = { onSortMode(mode) },
+                    enabled = !state.isBusy
+                ) {
+                    Text(
+                        label,
+                        color = if (state.sortMode == mode) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = if (state.sortMode == mode) FontWeight.Bold else FontWeight.Normal
+                    )
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            // 排序按钮
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("排序：", style = MaterialTheme.typography.bodySmall)
-                Spacer(modifier = Modifier.width(4.dp))
-                listOf(
-                    SortMode.BY_NAME to "名称",
-                    SortMode.BY_TCP_DELAY to "TCP延迟",
-                    SortMode.BY_REAL_DELAY to "真连接延迟"
-                ).forEach { (mode, label) ->
-                    TextButton(
-                        onClick = { onSortMode(mode) },
-                        enabled = !state.isBusy
-                    ) {
-                        Text(
-                            label,
-                            color = if (state.sortMode == mode) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = if (state.sortMode == mode) FontWeight.Bold else FontWeight.Normal
-                        )
-                    }
-                }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        // 操作行
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(onClick = { showImportDialog = true }, enabled = !state.isBusy) {
+                Text("手动导入")
             }
-            Spacer(modifier = Modifier.height(4.dp))
-            Row {
-                OutlinedButton(onClick = { showImportDialog = true }, enabled = !state.isBusy) {
-                    Text("手动导入")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                OutlinedButton(onClick = onRefresh, enabled = !state.isBusy) {
+            OutlinedButton(onClick = onRefresh, enabled = !state.isBusy) {
                     if (state.isBusy) {
                         CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -431,33 +429,18 @@ private fun NodesTab(
                                 style = MaterialTheme.typography.bodyLarge,
                                 modifier = Modifier.weight(1f)
                             )
-                            Column(horizontalAlignment = Alignment.End) {
-                                val tcpText = when {
-                                    node.tcpDelayMs == -2L -> "TCP测试中..."
-                                    node.tcpDelayMs == -3L -> "TCP超时"
-                                    node.tcpDelayMs >= 0 -> "TCP ${node.tcpDelayMs}ms"
-                                    else -> ""
-                                }
-                                val realText = when {
-                                    node.realDelayMs == -2L -> "真连接测试中..."
-                                    node.realDelayMs == -3L -> "真连接超时"
-                                    node.realDelayMs >= 0 -> "真连接 ${node.realDelayMs}ms"
-                                    else -> ""
-                                }
-                                if (tcpText.isNotEmpty()) {
-                                    Text(
-                                        tcpText,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = delayColor(node.tcpDelayMs)
-                                    )
-                                }
-                                if (realText.isNotEmpty()) {
-                                    Text(
-                                        realText,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = delayColor(node.realDelayMs)
-                                    )
-                                }
+                            val realText = when {
+                                node.realDelayMs == -2L -> "测试中..."
+                                node.realDelayMs == -3L -> "超时"
+                                node.realDelayMs >= 0 -> "${node.realDelayMs}ms"
+                                else -> ""
+                            }
+                            if (realText.isNotEmpty()) {
+                                Text(
+                                    realText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = delayColor(node.realDelayMs)
+                                )
                             }
                         }
                     }

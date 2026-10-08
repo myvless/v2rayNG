@@ -27,7 +27,7 @@ data class AirportNodeItem(
 )
 
 enum class SortMode {
-    BY_NAME, BY_TCP_DELAY, BY_REAL_DELAY
+    BY_NAME, BY_REAL_DELAY
 }
 
 data class AirportMainUiState(
@@ -88,10 +88,6 @@ class AirportMainViewModel(application: Application) : BaseViewModel(application
     private fun sortNodes(nodes: List<AirportNodeItem>, mode: SortMode): List<AirportNodeItem> {
         return when (mode) {
             SortMode.BY_NAME -> nodes.sortedBy { it.remarks }
-            SortMode.BY_TCP_DELAY -> nodes.sortedWith(compareBy(
-                { if (it.tcpDelayMs < 0) Long.MAX_VALUE else it.tcpDelayMs },
-                { it.remarks }
-            ))
             SortMode.BY_REAL_DELAY -> nodes.sortedWith(compareBy(
                 { if (it.realDelayMs < 0) Long.MAX_VALUE else it.realDelayMs },
                 { it.remarks }
@@ -199,13 +195,9 @@ class AirportMainViewModel(application: Application) : BaseViewModel(application
         }
     }
 
-    fun refreshRunning() {
+    fun refreshRunning(context: android.content.Context) {
         viewModelScope.launch(Dispatchers.Default) {
-            val running = try {
-                CoreServiceManager.isRunning()
-            } catch (_: Exception) {
-                false
-            }
+            val running = isServiceRunning(context)
             withContext(Dispatchers.Main) {
                 _uiState.value = _uiState.value.copy(isRunning = running, isConnecting = false)
             }
@@ -213,17 +205,32 @@ class AirportMainViewModel(application: Application) : BaseViewModel(application
     }
 
     /**
+     * 通过 ActivityManager 检查 VPN 服务是否在运行
+     */
+    private fun isServiceRunning(context: android.content.Context): Boolean {
+        return try {
+            val am = context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            @Suppress("DEPRECATION")
+            val services = am.getRunningServices(Integer.MAX_VALUE)
+            services.any {
+                it.service.className == "com.v2ray.ang.service.CoreVpnService" ||
+                it.service.className.endsWith(".CoreVpnService")
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
      * 开始连接：设为连接中状态，并轮询服务状态
      */
-    fun markConnecting() {
-        _uiState.value = _uiState.value.copy(isConnecting = true)
-        // 轮询服务状态，最多 10 秒
+    fun markConnecting(context: android.content.Context) {
+        _uiState.value = _uiState.value.copy(isConnecting = true, message = null)
+        // 轮询服务状态，最多 15 秒
         viewModelScope.launch {
-            repeat(20) {
+            repeat(30) {
                 kotlinx.coroutines.delay(500)
-                val running = try {
-                    withContext(Dispatchers.Default) { CoreServiceManager.isRunning() }
-                } catch (_: Exception) { false }
+                val running = withContext(Dispatchers.Default) { isServiceRunning(context) }
                 if (running) {
                     _uiState.value = _uiState.value.copy(isRunning = true, isConnecting = false)
                     return@launch
