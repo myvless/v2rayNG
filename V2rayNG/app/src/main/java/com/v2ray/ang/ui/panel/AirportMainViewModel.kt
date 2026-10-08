@@ -20,15 +20,24 @@ data class AirportNodeItem(
     val guid: String,
     val remarks: String,
     val isSelected: Boolean,
-    val delayMs: Long = -1L  // -1=未测, -2=测试中, >=0=延迟ms, -3=超时/失败
+    val tcpDelayMs: Long = -1L,   // -1=未测, -2=测试中, >=0=延迟ms, -3=超时/失败
+    val realDelayMs: Long = -1L,  // 真连接延迟（HTTP）
+    val subscriptionId: String = "",
+    val subscriptionRemarks: String = ""
 )
+
+enum class SortMode {
+    BY_NAME, BY_TCP_DELAY, BY_REAL_DELAY
+}
 
 data class AirportMainUiState(
     val nodes: List<AirportNodeItem> = emptyList(),
     val isRunning: Boolean = false,
+    val isConnecting: Boolean = false,
     val isBusy: Boolean = false,
     val message: String? = null,
-    val email: String = ""
+    val email: String = "",
+    val sortMode: SortMode = SortMode.BY_NAME
 )
 
 class AirportMainViewModel(application: Application) : BaseViewModel(application) {
@@ -46,32 +55,60 @@ class AirportMainViewModel(application: Application) : BaseViewModel(application
         viewModelScope.launch(Dispatchers.Default) {
             val guids = MmkvManager.decodeAllServerList()
             val selected = MmkvManager.getSelectServer()
-            val prevDelays = _uiState.value.nodes.associate { it.guid to it.delayMs }
+            val prev = _uiState.value.nodes.associateBy { it.guid }
+            // 取订阅备注用于分组
+            val subMap = MmkvManager.decodeSubscriptions().associate { it.guid to it.subscription.remarks }
             val items = guids.mapNotNull { guid ->
                 val config: ProfileItem = MmkvManager.decodeServerConfig(guid) ?: return@mapNotNull null
+                val old = prev[guid]
                 AirportNodeItem(
                     guid = guid,
                     remarks = config.remarks.ifBlank { guid.take(8) },
                     isSelected = guid == selected,
-                    delayMs = prevDelays[guid] ?: -1L
+                    tcpDelayMs = old?.tcpDelayMs ?: -1L,
+                    realDelayMs = old?.realDelayMs ?: -1L,
+                    subscriptionId = config.subscriptionId,
+                    subscriptionRemarks = subMap[config.subscriptionId] ?: "默认分组"
                 )
             }
+            val sorted = sortNodes(items, _uiState.value.sortMode)
             withContext(Dispatchers.Main) {
-                _uiState.value = _uiState.value.copy(nodes = items)
+                _uiState.value = _uiState.value.copy(nodes = sorted)
             }
+        }
+    }
+
+    fun setSortMode(mode: SortMode) {
+        _uiState.value = _uiState.value.copy(
+            sortMode = mode,
+            nodes = sortNodes(_uiState.value.nodes, mode)
+        )
+    }
+
+    private fun sortNodes(nodes: List<AirportNodeItem>, mode: SortMode): List<AirportNodeItem> {
+        return when (mode) {
+            SortMode.BY_NAME -> nodes.sortedBy { it.remarks }
+            SortMode.BY_TCP_DELAY -> nodes.sortedWith(compareBy(
+                { if (it.tcpDelayMs < 0) Long.MAX_VALUE else it.tcpDelayMs },
+                { it.remarks }
+            ))
+            SortMode.BY_REAL_DELAY -> nodes.sortedWith(compareBy(
+                { if (it.realDelayMs < 0) Long.MAX_VALUE else it.realDelayMs },
+                { it.remarks }
+            ))
         }
     }
 
     /**
      * 测试全部节点 TCP 延迟
      */
-    fun testAllDelay() {
+    fun testTcpDelay() {
         if (_uiState.value.isBusy) return
         val nodes = _uiState.value.nodes
         if (nodes.isEmpty()) return
         _uiState.value = _uiState.value.copy(
-            nodes = nodes.map { it.copy(delayMs = -2L) },
-            message = "正在测试延迟..."
+            nodes = nodes.map { it.copy(tcpDelayMs = -2L) },
+            message = "正在测试 TCP 延迟..."
         )
         viewModelScope.launch(Dispatchers.Default) {
             nodes.forEach { node ->
@@ -79,13 +116,41 @@ class AirportMainViewModel(application: Application) : BaseViewModel(application
                 withContext(Dispatchers.Main) {
                     _uiState.value = _uiState.value.copy(
                         nodes = _uiState.value.nodes.map {
-                            if (it.guid == node.guid) it.copy(delayMs = delay) else it
+                            if (it.guid == node.guid) it.copy(tcpDelayMs = delay) else it
                         }
                     )
                 }
             }
             withContext(Dispatchers.Main) {
-                _uiState.value = _uiState.value.copy(message = "延迟测试完成")
+                _uiState.value = _uiState.value.copy(message = "TCP 延迟测试完成")
+            }
+        }
+    }
+
+    /**
+     * 测试全部节点真连接延迟（HTTP GET 到服务器）
+     */
+    fun testRealDelay() {
+        if (_uiState.value.isBusy) return
+        val nodes = _uiState.value.nodes
+        if (nodes.isEmpty()) return
+        _uiState.value = _uiState.value.copy(
+            nodes = nodes.map { it.copy(realDelayMs = -2L) },
+            message = "正在测试真连接延迟..."
+        )
+        viewModelScope.launch(Dispatchers.Default) {
+            nodes.forEach { node ->
+                val delay = realPing(node.guid)
+                withContext(Dispatchers.Main) {
+                    _uiState.value = _uiState.value.copy(
+                        nodes = _uiState.value.nodes.map {
+                            if (it.guid == node.guid) it.copy(realDelayMs = delay) else it
+                        }
+                    )
+                }
+            }
+            withContext(Dispatchers.Main) {
+                _uiState.value = _uiState.value.copy(message = "真连接延迟测试完成")
             }
         }
     }
@@ -108,6 +173,32 @@ class AirportMainViewModel(application: Application) : BaseViewModel(application
         }
     }
 
+    /**
+     * 真连接延迟：向服务器发 HTTP 请求测应用层延迟
+     * 超时返回 -3
+     */
+    private fun realPing(guid: String): Long {
+        return try {
+            val config = MmkvManager.decodeServerConfig(guid) ?: return -3L
+            val host = config.server ?: return -3L
+            // 用 HTTP GET 测试服务器响应（5秒超时）
+            val url = java.net.URL("http://$host/")
+            val start = System.currentTimeMillis()
+            (url.openConnection() as java.net.HttpURLConnection).apply {
+                connectTimeout = 5000
+                readTimeout = 5000
+                requestMethod = "GET"
+                connect()
+                // 只要能连上就算成功，不要求 200
+                responseCode
+                disconnect()
+            }
+            System.currentTimeMillis() - start
+        } catch (_: Exception) {
+            -3L
+        }
+    }
+
     fun refreshRunning() {
         viewModelScope.launch(Dispatchers.Default) {
             val running = try {
@@ -116,9 +207,38 @@ class AirportMainViewModel(application: Application) : BaseViewModel(application
                 false
             }
             withContext(Dispatchers.Main) {
-                _uiState.value = _uiState.value.copy(isRunning = running)
+                _uiState.value = _uiState.value.copy(isRunning = running, isConnecting = false)
             }
         }
+    }
+
+    /**
+     * 开始连接：设为连接中状态，并轮询服务状态
+     */
+    fun markConnecting() {
+        _uiState.value = _uiState.value.copy(isConnecting = true)
+        // 轮询服务状态，最多 10 秒
+        viewModelScope.launch {
+            repeat(20) {
+                kotlinx.coroutines.delay(500)
+                val running = try {
+                    withContext(Dispatchers.Default) { CoreServiceManager.isRunning() }
+                } catch (_: Exception) { false }
+                if (running) {
+                    _uiState.value = _uiState.value.copy(isRunning = true, isConnecting = false)
+                    return@launch
+                }
+            }
+            // 超时仍未启动
+            _uiState.value = _uiState.value.copy(
+                isConnecting = false,
+                message = "连接超时，请检查节点是否可用"
+            )
+        }
+    }
+
+    fun markDisconnected() {
+        _uiState.value = _uiState.value.copy(isRunning = false, isConnecting = false)
     }
 
     fun selectNode(guid: String) {
