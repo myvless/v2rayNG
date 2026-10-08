@@ -195,7 +195,7 @@ class AirportMainViewModel(application: Application) : BaseViewModel(application
         }
     }
 
-    fun refreshRunning(context: android.content.Context) {
+    fun refreshRunning(context: android.content.Context? = null) {
         viewModelScope.launch(Dispatchers.Default) {
             val running = isServiceRunning(context)
             withContext(Dispatchers.Main) {
@@ -207,7 +207,8 @@ class AirportMainViewModel(application: Application) : BaseViewModel(application
     /**
      * 通过 ActivityManager 检查 VPN 服务是否在运行
      */
-    private fun isServiceRunning(context: android.content.Context): Boolean {
+    private fun isServiceRunning(context: android.content.Context?): Boolean {
+        if (context == null) return false
         return try {
             val am = context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
             @Suppress("DEPRECATION")
@@ -224,7 +225,7 @@ class AirportMainViewModel(application: Application) : BaseViewModel(application
     /**
      * 开始连接：设为连接中状态，并轮询服务状态
      */
-    fun markConnecting(context: android.content.Context) {
+    fun markConnecting(context: android.content.Context? = null) {
         _uiState.value = _uiState.value.copy(isConnecting = true, message = null)
         // 轮询服务状态，最多 15 秒
         viewModelScope.launch {
