@@ -41,7 +41,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.base.BaseComponentActivity
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 机场面板登录/注册页
@@ -57,9 +59,39 @@ class PanelAuthActivity : BaseComponentActivity() {
         lifecycleScope.launch {
             viewModel.uiState.collect { state ->
                 if (state.authDone) {
-                    startActivity(Intent(this@PanelAuthActivity, AirportMainActivity::class.java))
-                    finish()
+                    // 登录成功后自动导入面板订阅，然后进原生主界面
+                    autoImportSubscriptionAndGo()
                 }
+            }
+        }
+    }
+
+    /**
+     * 自动从面板获取订阅并导入，然后进入原生主界面
+     */
+    private fun autoImportSubscriptionAndGo() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val result = com.v2ray.ang.panel.PanelApi.fetchSubscriptionUrl()
+                if (result is com.v2ray.ang.panel.PanelApi.ApiResult.Success) {
+                    val subUrl = result.message
+                    com.v2ray.ang.panel.PanelSession.saveSubscriptionUrl(subUrl)
+                    // 确保订阅已加入列表
+                    val existing = com.v2ray.ang.handler.MmkvManager.decodeSubscriptions()
+                    val hasPanel = existing.any { it.subscription.remarks == "面板订阅" }
+                    if (!hasPanel) {
+                        val subItem = com.v2ray.ang.dto.entities.SubscriptionItem().apply {
+                            remarks = "面板订阅"
+                            url = subUrl
+                        }
+                        val guid = com.v2ray.ang.handler.MmkvManager.encodeSubscription(subItem)
+                    }
+                    com.v2ray.ang.handler.AngConfigManager.updateConfigViaSubAll()
+                }
+            } catch (_: Exception) { }
+            withContext(Dispatchers.Main) {
+                startActivity(Intent(this@PanelAuthActivity, com.v2ray.ang.ui.main.MainActivity::class.java))
+                finish()
             }
         }
     }
