@@ -84,7 +84,8 @@ class PanelAuthActivity : BaseComponentActivity() {
                             remarks = "面板订阅"
                             url = subUrl
                         }
-                        val guid = com.v2ray.ang.handler.MmkvManager.encodeSubscription(subItem)
+                        val guid = java.util.UUID.randomUUID().toString()
+                        com.v2ray.ang.handler.MmkvManager.encodeSubscription(guid, subItem)
                     }
                     com.v2ray.ang.handler.AngConfigManager.updateConfigViaSubAll()
                 }
