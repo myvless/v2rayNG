@@ -210,6 +210,44 @@ object PanelApi {
     }
 
     suspend fun fetchUserInfo(): PanelUserInfo = withContext(Dispatchers.IO) {
+        // 先尝试从订阅的 Subscription-Userinfo 头获取（最可靠）
+        try {
+            val subUrl = PanelSession.getSubscriptionUrl()
+            if (subUrl.isNotBlank()) {
+                val subRequest = okhttp3.Request.Builder().url(subUrl).get().build()
+                client.newCall(subRequest).execute().use { subResp ->
+                    val userinfoHeader = subResp.header("Subscription-Userinfo")
+                        ?: subResp.header("subscription-userinfo")
+                    if (!userinfoHeader.isNullOrBlank()) {
+                        // 格式: upload=123; download=456; total=789; expire=1234567890
+                        val map = userinfoHeader.split(";").mapNotNull { part ->
+                            val kv = part.trim().split("=", limit = 2)
+                            if (kv.size == 2) kv[0].trim() to kv[1].trim() else null
+                        }.toMap()
+                        val upload = map["upload"]?.toLongOrNull() ?: 0L
+                        val download = map["download"]?.toLongOrNull() ?: 0L
+                        val total = map["total"]?.toLongOrNull() ?: 0L
+                        val expireTs = map["expire"]?.toLongOrNull() ?: 0L
+                        if (total > 0) {
+                            val used = upload + download
+                            val percent = (used.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+                            val expireDate = if (expireTs > 0) {
+                                try {
+                                    java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                                        .format(java.util.Date(expireTs * 1000))
+                                } catch (_: Exception) { "" }
+                            } else ""
+                            return@withContext PanelUserInfo(
+                                "", expireDate,
+                                formatBytes(used), formatBytes(total), percent
+                            )
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) { }
+
+        // 回退：解析 /user 页面 HTML
         try {
             val request = okhttp3.Request.Builder()
                 .url(PanelConfig.PANEL_BASE_URL + PanelConfig.PATH_USER)
@@ -241,6 +279,31 @@ object PanelApi {
 
     fun clearCookies() {
         cookieJar.clear()
+    }
+
+    /**
+     * 获取用于 WebView 的 Cookie 字符串
+     */
+    private fun formatBytes(bytes: Long): String {
+        if (bytes <= 0) return "0 B"
+        val units = arrayOf("B", "KB", "MB", "GB", "TB")
+        var value = bytes.toDouble()
+        var idx = 0
+        while (value >= 1024 && idx < units.size - 1) {
+            value /= 1024
+            idx++
+        }
+        return String.format(java.util.Locale.getDefault(), "%.2f %s", value, units[idx])
+    }
+
+    fun getCookieHeader(): String {
+        return try {
+            val host = okhttp3.HttpUrl.parse(PanelConfig.PANEL_BASE_URL)?.host() ?: return ""
+            val serialized = cookieStore.decodeString("cookies_${host}") ?: return ""
+            serialized.split(";").joinToString("; ") { it.trim() }
+        } catch (_: Exception) {
+            ""
+        }
     }
 
     /**
