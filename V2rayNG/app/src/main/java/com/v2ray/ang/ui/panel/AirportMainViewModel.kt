@@ -135,6 +135,34 @@ class AirportMainViewModel(application: Application) : BaseViewModel(application
         MmkvManager.encodeSubscription(guid, item)
     }
 
+    /**
+     * 手动导入订阅链接
+     */
+    fun importSubscription(subUrl: String) {
+        if (_uiState.value.isBusy) return
+        if (subUrl.isBlank()) {
+            _uiState.value = _uiState.value.copy(message = "订阅链接不能为空")
+            return
+        }
+        _uiState.value = _uiState.value.copy(isBusy = true, message = null)
+        viewModelScope.launch {
+            val count = withContext(Dispatchers.IO) {
+                PanelSession.saveSubscriptionUrl(subUrl)
+                ensurePanelSubscription(subUrl)
+                val result = AngConfigManager.updateConfigViaSubAll()
+                result.successCount
+            }
+            refreshNodes()
+            val nodeCount = withContext(Dispatchers.Default) {
+                MmkvManager.decodeAllServerList().size
+            }
+            _uiState.value = _uiState.value.copy(
+                isBusy = false,
+                message = if (nodeCount > 0) "导入成功，共 ${nodeCount} 个节点" else "导入完成，但未获取到节点，请检查链接"
+            )
+        }
+    }
+
     fun logout(onDone: () -> Unit) {
         viewModelScope.launch(Dispatchers.Default) {
             PanelSession.logout()

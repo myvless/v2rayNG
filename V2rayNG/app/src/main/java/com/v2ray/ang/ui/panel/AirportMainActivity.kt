@@ -24,12 +24,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -40,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -129,7 +133,8 @@ class AirportMainActivity : BaseComponentActivity() {
                         state = state,
                         onSelect = { viewModel.selectNode(it) },
                         onToggleVpn = { toggleVpn(state.isRunning) },
-                        onRefresh = { viewModel.updateSubscription() }
+                        onRefresh = { viewModel.updateSubscription() },
+                        onManualImport = { viewModel.importSubscription(it) }
                     )
                     1 -> ShopTab()
                     2 -> ProfileTab(
@@ -182,8 +187,11 @@ private fun NodesTab(
     state: AirportMainUiState,
     onSelect: (String) -> Unit,
     onToggleVpn: () -> Unit,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    onManualImport: (String) -> Unit
 ) {
+    var showImportDialog by remember { mutableStateOf(false) }
+    var importUrl by remember { mutableStateOf("") }
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         // 连接状态卡片
         Card(
@@ -228,16 +236,55 @@ private fun NodesTab(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("节点列表（${state.nodes.size}）", style = MaterialTheme.typography.titleMedium)
-            OutlinedButton(onClick = onRefresh, enabled = !state.isBusy) {
-                if (state.isBusy) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                } else {
-                    Text("⟳", fontSize = 16.sp)
-                    Spacer(modifier = Modifier.width(8.dp))
+            Row {
+                OutlinedButton(onClick = { showImportDialog = true }, enabled = !state.isBusy) {
+                    Text("手动导入")
                 }
-                Text("更新订阅")
+                Spacer(modifier = Modifier.width(8.dp))
+                OutlinedButton(onClick = onRefresh, enabled = !state.isBusy) {
+                    if (state.isBusy) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                    } else {
+                        Text("⟳", fontSize = 16.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text("更新订阅")
+                }
             }
+        }
+
+        // 手动导入订阅链接对话框
+        if (showImportDialog) {
+            AlertDialog(
+                onDismissRequest = { showImportDialog = false },
+                title = { Text("导入订阅链接") },
+                text = {
+                    Column {
+                        Text("从面板复制订阅链接粘贴到下面：", style = MaterialTheme.typography.bodySmall)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = importUrl,
+                            onValueChange = { importUrl = it },
+                            placeholder = { Text("https://...") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        if (importUrl.isNotBlank()) {
+                            onManualImport(importUrl.trim())
+                            showImportDialog = false
+                            importUrl = ""
+                        }
+                    }) { Text("确定") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showImportDialog = false }) { Text("取消") }
+                }
+            )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -248,7 +295,13 @@ private fun NodesTab(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text("暂无节点，点击右上角「更新订阅」获取", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("暂无节点", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "点「更新订阅」自动获取，或点「手动导入」粘贴面板的订阅链接",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         } else {
             LazyColumn(
