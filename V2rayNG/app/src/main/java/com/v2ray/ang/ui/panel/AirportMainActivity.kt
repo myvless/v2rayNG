@@ -65,7 +65,7 @@ import com.v2ray.ang.ui.base.BaseComponentActivity
  *
  * 登录成功后进入。节点页显示订阅节点列表，点击选中并连接 VPN。
  */
-class AirportMainActivity : BaseComponentActivity() {
+class AirportMainActivity : com.v2ray.ang.ui.base.HelperBaseComponentActivity() {
 
     private val viewModel: AirportMainViewModel by viewModels()
 
@@ -134,7 +134,8 @@ class AirportMainActivity : BaseComponentActivity() {
                         onSelect = { viewModel.selectNode(it) },
                         onToggleVpn = { toggleVpn(state.isRunning) },
                         onRefresh = { viewModel.updateSubscription() },
-                        onManualImport = { viewModel.importSubscription(it) }
+                        onManualImport = { viewModel.importSubscription(it) },
+                        onTestDelay = { viewModel.testAllDelay() }
                     )
                     1 -> ShopTab()
                     2 -> ProfileTab(
@@ -172,16 +173,30 @@ class AirportMainActivity : BaseComponentActivity() {
                 android.widget.Toast.makeText(this, "请先选择节点", android.widget.Toast.LENGTH_SHORT).show()
                 return
             }
+            // Android 16+ 需要本地网络权限（与 MainActivity 一致）
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.CINNAMON_BUN) {
+                checkAndRequestPermission(com.v2ray.ang.enums.PermissionType.ACCESS_LOCAL_NETWORK) {
+                    requestVpnAndStart()
+                }
+            } else {
+                requestVpnAndStart()
+            }
+        }
+    }
+
+    private fun requestVpnAndStart() {
+        try {
             val intent = VpnService.prepare(this)
             if (intent == null) {
                 LauncherManager.startService(this)
-                // 延迟刷新状态，等服务启动
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                     viewModel.refreshRunning()
                 }, 1000)
             } else {
                 requestVpnPermission.launch(intent)
             }
+        } catch (e: Exception) {
+            android.widget.Toast.makeText(this, "启动失败：${e.message}", android.widget.Toast.LENGTH_LONG).show()
         }
     }
 
@@ -200,7 +215,8 @@ private fun NodesTab(
     onSelect: (String) -> Unit,
     onToggleVpn: () -> Unit,
     onRefresh: () -> Unit,
-    onManualImport: (String) -> Unit
+    onManualImport: (String) -> Unit,
+    onTestDelay: () -> Unit
 ) {
     var showImportDialog by remember { mutableStateOf(false) }
     var importUrl by remember { mutableStateOf("") }
@@ -249,6 +265,10 @@ private fun NodesTab(
         ) {
             Text("节点列表（${state.nodes.size}）", style = MaterialTheme.typography.titleMedium)
             Row {
+                OutlinedButton(onClick = onTestDelay, enabled = !state.isBusy) {
+                    Text("测延迟")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
                 OutlinedButton(onClick = { showImportDialog = true }, enabled = !state.isBusy) {
                     Text("手动导入")
                 }
@@ -345,7 +365,30 @@ private fun NodesTab(
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                             }
-                            Text(node.remarks, style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                node.remarks,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.weight(1f)
+                            )
+                            val delayText = when {
+                                node.delayMs == -2L -> "测试中..."
+                                node.delayMs == -3L -> "超时"
+                                node.delayMs >= 0 -> "${node.delayMs}ms"
+                                else -> ""
+                            }
+                            if (delayText.isNotEmpty()) {
+                                Text(
+                                    delayText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = when {
+                                        node.delayMs == -2L -> MaterialTheme.colorScheme.onSurfaceVariant
+                                        node.delayMs == -3L -> MaterialTheme.colorScheme.error
+                                        node.delayMs < 300 -> Color(0xFF4CAF50)
+                                        node.delayMs < 800 -> Color(0xFFFF9800)
+                                        else -> MaterialTheme.colorScheme.error
+                                    }
+                                )
+                            }
                         }
                     }
                 }

@@ -19,7 +19,8 @@ import kotlinx.coroutines.withContext
 data class AirportNodeItem(
     val guid: String,
     val remarks: String,
-    val isSelected: Boolean
+    val isSelected: Boolean,
+    val delayMs: Long = -1L  // -1=未测, -2=测试中, >=0=延迟ms, -3=超时/失败
 )
 
 data class AirportMainUiState(
@@ -45,17 +46,65 @@ class AirportMainViewModel(application: Application) : BaseViewModel(application
         viewModelScope.launch(Dispatchers.Default) {
             val guids = MmkvManager.decodeAllServerList()
             val selected = MmkvManager.getSelectServer()
+            val prevDelays = _uiState.value.nodes.associate { it.guid to it.delayMs }
             val items = guids.mapNotNull { guid ->
                 val config: ProfileItem = MmkvManager.decodeServerConfig(guid) ?: return@mapNotNull null
                 AirportNodeItem(
                     guid = guid,
                     remarks = config.remarks.ifBlank { guid.take(8) },
-                    isSelected = guid == selected
+                    isSelected = guid == selected,
+                    delayMs = prevDelays[guid] ?: -1L
                 )
             }
             withContext(Dispatchers.Main) {
                 _uiState.value = _uiState.value.copy(nodes = items)
             }
+        }
+    }
+
+    /**
+     * 测试全部节点 TCP 延迟
+     */
+    fun testAllDelay() {
+        if (_uiState.value.isBusy) return
+        val nodes = _uiState.value.nodes
+        if (nodes.isEmpty()) return
+        _uiState.value = _uiState.value.copy(
+            nodes = nodes.map { it.copy(delayMs = -2L) },
+            message = "正在测试延迟..."
+        )
+        viewModelScope.launch(Dispatchers.Default) {
+            nodes.forEach { node ->
+                val delay = tcpPing(node.guid)
+                withContext(Dispatchers.Main) {
+                    _uiState.value = _uiState.value.copy(
+                        nodes = _uiState.value.nodes.map {
+                            if (it.guid == node.guid) it.copy(delayMs = delay) else it
+                        }
+                    )
+                }
+            }
+            withContext(Dispatchers.Main) {
+                _uiState.value = _uiState.value.copy(message = "延迟测试完成")
+            }
+        }
+    }
+
+    /**
+     * TCP 连接测延迟，超时返回 -3
+     */
+    private fun tcpPing(guid: String): Long {
+        return try {
+            val config = MmkvManager.decodeServerConfig(guid) ?: return -3L
+            val host = config.server ?: return -3L
+            val port = config.serverPort?.toIntOrNull() ?: return -3L
+            val start = System.currentTimeMillis()
+            java.net.Socket().use { socket ->
+                socket.connect(java.net.InetSocketAddress(host, port), 3000)
+            }
+            System.currentTimeMillis() - start
+        } catch (_: Exception) {
+            -3L
         }
     }
 

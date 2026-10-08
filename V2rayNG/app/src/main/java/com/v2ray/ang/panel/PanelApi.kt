@@ -168,14 +168,30 @@ object PanelApi {
                     return@withContext ApiResult.Failure("获取订阅失败 (${resp.code})，请重新登录")
                 }
                 val html = resp.body.string()
-                // 面板用户中心页面内嵌订阅链接，形如 https://panel.020178.xyz/link/xxx
-                // V2Ray 格式是在默认订阅地址后加 /v2ray
-                val regex = Regex("""https?://[^"'<>\s]+/link/[^"'<>\s?]+""")
-                val match = regex.find(html)
-                if (match != null) {
-                    val url = match.value + "/v2ray"
-                    LogUtil.i(TAG, "got subscription url")
-                    return@withContext ApiResult.Success(url)
+                // 尝试多种订阅链接格式
+                // 1. 面板用户中心页面内嵌订阅链接，形如 https://panel.020178.xyz/link/xxx
+                //    V2Ray 格式是在默认订阅地址后加 /v2ray
+                val patterns = listOf(
+                    Regex("""https?://[^"'<>\s]+/link/[^"'<>\s?/]+"""),
+                    Regex("""data-clipboard-text\s*=\s*["'](https?://[^"'<>]+)["']"""),
+                    Regex("""["'](https?://[^"'<>]*?/link/[^"'<>?/]+)["']""")
+                )
+                for (pattern in patterns) {
+                    val match = pattern.find(html)
+                    if (match != null) {
+                        // 取第一个捕获组（如果是 data-clipboard-text 格式），否则取整个匹配
+                        var baseUrl = if (match.groups.size > 1 && match.groups[1] != null) {
+                            match.groups[1]!!.value
+                        } else {
+                            match.value
+                        }
+                        // 去掉可能已有的格式后缀
+                        baseUrl = baseUrl.replace(Regex("/(v2ray|clash|surge|singbox|json|sip008|shadowsocks|trojan)$"), "")
+                        baseUrl = baseUrl.replace(Regex("""\?.*$"""), "")
+                        val url = "$baseUrl/v2ray"
+                        LogUtil.i(TAG, "got subscription url")
+                        return@withContext ApiResult.Success(url)
+                    }
                 }
                 ApiResult.Failure("未找到订阅链接，请确认账号有效")
             }
