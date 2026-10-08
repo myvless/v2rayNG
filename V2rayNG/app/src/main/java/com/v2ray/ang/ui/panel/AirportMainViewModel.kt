@@ -7,6 +7,7 @@ import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.handler.AngConfigManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.panel.PanelApi
+import com.v2ray.ang.panel.PanelUserInfo
 import com.v2ray.ang.panel.PanelSession
 import com.v2ray.ang.ui.base.BaseViewModel
 import kotlinx.coroutines.Dispatchers

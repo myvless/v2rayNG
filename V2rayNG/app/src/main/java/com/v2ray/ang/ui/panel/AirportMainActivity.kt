@@ -60,6 +60,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.core.LauncherManager
 import com.v2ray.ang.panel.PanelApi
+import com.v2ray.ang.panel.PanelUserInfo
 import com.v2ray.ang.panel.PanelConfig
 import com.v2ray.ang.panel.PanelSession
 
