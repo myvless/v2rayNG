@@ -445,7 +445,6 @@ private fun NodesTab(
                         }
                     }
                 }
-                }
             }
         }
     }
