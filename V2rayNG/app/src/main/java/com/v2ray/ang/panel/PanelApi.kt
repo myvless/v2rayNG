@@ -168,15 +168,12 @@ object PanelApi {
                     return@withContext ApiResult.Failure("获取订阅失败 (${resp.code})，请重新登录")
                 }
                 val html = resp.body.string()
-                // 面板用户中心页面内嵌订阅链接，形如 https://panel.020178.xyz/link/xxx?sub=1
-                val regex = Regex("""https?://[^"'<>\s]+/link/[^"'<>\s?]+(?:\?[^"'<>\s]*)?""")
+                // 面板用户中心页面内嵌订阅链接，形如 https://panel.020178.xyz/link/xxx
+                // V2Ray 格式是在默认订阅地址后加 /v2ray
+                val regex = Regex("""https?://[^"'<>\s]+/link/[^"'<>\s?]+""")
                 val match = regex.find(html)
                 if (match != null) {
-                    var url = match.value
-                    // 确保带 sub 参数以获取订阅格式
-                    if (!url.contains("sub=")) {
-                        url += if (url.contains("?")) "&sub=1" else "?sub=1"
-                    }
+                    val url = match.value + "/v2ray"
                     LogUtil.i(TAG, "got subscription url")
                     return@withContext ApiResult.Success(url)
                 }
