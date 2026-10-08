@@ -191,4 +191,14 @@ object PanelApi {
     fun clearCookies() {
         cookieJar.clear()
     }
+
+    /**
+     * 获取面板域名的 cookie 字符串，用于 WebView 同步登录态
+     */
+    fun getCookieHeader(): String {
+        val serialized = cookieStore.decodeString("cookies_${PanelConfig.PANEL_HOST}")
+        if (serialized.isNullOrEmpty()) return ""
+        // MMKV 里存的是 "name=value;name=value" 格式，转成 Cookie 头格式
+        return serialized.split(";").joinToString("; ") { it.trim() }
+    }
 }

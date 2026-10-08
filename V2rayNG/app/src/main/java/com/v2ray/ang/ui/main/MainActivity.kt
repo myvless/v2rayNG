@@ -91,17 +91,15 @@ class MainActivity : HelperBaseComponentActivity() {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 机场模式：未登录面板时先走登录/注册页
-        if (!com.v2ray.ang.panel.PanelSession.isLoggedIn()) {
-            super.onCreate(savedInstanceState)
-            startActivity(Intent(this, com.v2ray.ang.ui.panel.PanelAuthActivity::class.java))
-            finish()
-            return
-        }
+        // 机场模式：统一走机场主界面
         super.onCreate(savedInstanceState)
-        mainViewModel.onAction(MainAction.Initialize)
-
-        checkAndRequestPermission(PermissionType.POST_NOTIFICATIONS) {}
+        val target = if (!com.v2ray.ang.panel.PanelSession.isLoggedIn()) {
+            com.v2ray.ang.ui.panel.PanelAuthActivity::class.java
+        } else {
+            com.v2ray.ang.ui.panel.AirportMainActivity::class.java
+        }
+        startActivity(Intent(this, target))
+        finish()
     }
 
     @Composable

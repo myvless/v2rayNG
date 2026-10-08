@@ -41,7 +41,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.base.BaseComponentActivity
-import com.v2ray.ang.ui.main.MainActivity
 import kotlinx.coroutines.launch
 
 /**
@@ -58,7 +57,7 @@ class PanelAuthActivity : BaseComponentActivity() {
         lifecycleScope.launch {
             viewModel.uiState.collect { state ->
                 if (state.authDone) {
-                    startActivity(Intent(this@PanelAuthActivity, MainActivity::class.java))
+                    startActivity(Intent(this@PanelAuthActivity, AirportMainActivity::class.java))
                     finish()
                 }
             }
