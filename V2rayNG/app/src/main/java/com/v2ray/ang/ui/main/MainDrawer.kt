@@ -59,13 +59,7 @@ private val primaryDrawerItems = listOf(
     MainDestination.Settings
 )
 
-private val drawerItems = primaryDrawerItems + listOf(
-    MainDestination.Promotion,
-    MainDestination.Logcat,
-    MainDestination.CheckUpdate,
-    MainDestination.BackupRestore,
-    MainDestination.About
-)
+private val drawerItems = primaryDrawerItems
 
 @Composable
 fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) -> Unit) {
