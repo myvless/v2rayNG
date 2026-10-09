@@ -95,7 +95,7 @@ fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) ->
                 ) {
                     val isDarkTheme = LocalDarkTheme.current
                     Image(
-                        painter = painterResource(R.mipmap.ic_launcher),
+                        painter = painterResource(R.drawable.ic_zhifeiyun),
                         contentDescription = null,
                         modifier = Modifier.size(120.dp),
                         colorFilter = if (isDarkTheme) {
