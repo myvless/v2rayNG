@@ -248,7 +248,8 @@ object PanelApi {
             }
         } catch (_: Exception) { }
 
-        // 回退：解析 /user 页面 HTML
+        // 回退：解析 /user 页面 HTML（SSPanel-Uim tabler 主题格式）
+        // 页面包含：过去用量 X、今日用量 Y、剩余流量 Z
         try {
             val request = okhttp3.Request.Builder()
                 .url(PanelConfig.PANEL_BASE_URL + PanelConfig.PATH_USER)
@@ -257,21 +258,47 @@ object PanelApi {
             client.newCall(request).execute().use { resp ->
                 if (!resp.isSuccessful) return@withContext PanelUserInfo()
                 val html = resp.body.string()
-                var used = ""
-                var total = ""
-                var percent = 0f
-                Regex("""([\d.]+\s*[KMGT]?B)\s*/\s*([\d.]+\s*[KMGT]?B)""").find(html)?.let {
-                    used = it.groups[1]?.value ?: ""
-                    total = it.groups[2]?.value ?: ""
+                fun parseTraffic(label: String): Long {
+                    val m = Regex(label + """\s*([\d.]+)\s*([KMGT]?B)""").find(html) ?: return 0L
+                    val num = m.groups[1]?.value?.toDoubleOrNull() ?: return 0L
+                    val unit = m.groups[2]?.value ?: "B"
+                    val mult = when (unit) {
+                        "KB" -> 1024L
+                        "MB" -> 1024L * 1024
+                        "GB" -> 1024L * 1024 * 1024
+                        "TB" -> 1024L * 1024 * 1024 * 1024
+                        else -> 1L
+                    }
+                    return (num * mult).toLong()
                 }
-                Regex("""(\d+(?:\.\d+)?)\s*%""").find(html)?.let {
-                    percent = it.groups[1]?.value?.toFloatOrNull()?.div(100f) ?: 0f
+                val pastUsed = parseTraffic("过去用量")
+                val todayUsed = parseTraffic("今日用量")
+                val remaining = parseTraffic("剩余流量")
+                val usedBytes = pastUsed + todayUsed
+                val totalBytes = usedBytes + remaining
+                var percent = 0f
+                if (totalBytes > 0) {
+                    percent = (usedBytes.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
+                }
+                // 兼容旧格式：X / Y
+                var usedStr = if (usedBytes > 0 || remaining > 0) formatBytes(usedBytes) else ""
+                var totalStr = if (totalBytes > 0) formatBytes(totalBytes) else ""
+                if (usedStr.isEmpty()) {
+                    Regex("""([\d.]+\s*[KMGT]?B)\s*/\s*([\d.]+\s*[KMGT]?B)""").find(html)?.let {
+                        usedStr = it.groups[1]?.value ?: ""
+                        totalStr = it.groups[2]?.value ?: ""
+                    }
+                }
+                if (percent == 0f) {
+                    Regex("""(\d+(?:\.\d+)?)\s*%""").find(html)?.let {
+                        percent = it.groups[1]?.value?.toFloatOrNull()?.div(100f) ?: 0f
+                    }
                 }
                 var expire = ""
                 Regex("""到期[^<]{0,30}?(\d{4}-\d{2}-\d{2})""").find(html)?.let {
                     expire = it.groups[1]?.value ?: ""
                 }
-                PanelUserInfo("", expire, used, total, percent.coerceIn(0f, 1f))
+                PanelUserInfo("", expire, usedStr, totalStr, percent.coerceIn(0f, 1f))
             }
         } catch (_: Exception) {
             PanelUserInfo()

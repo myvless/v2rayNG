@@ -38,7 +38,7 @@ class PanelShopActivity : BaseComponentActivity() {
                             cookieManager.setCookie(PanelConfig.PANEL_BASE_URL, cookie.trim())
                         }
                     }
-                    loadUrl(PanelConfig.PANEL_BASE_URL + "/user/shop")
+                    loadUrl(PanelConfig.PANEL_BASE_URL + "/user/product")
                 }
             }
         )
