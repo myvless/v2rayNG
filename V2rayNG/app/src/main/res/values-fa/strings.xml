@@ -573,4 +573,35 @@
     <string name="panel_error_empty">Please fill in email and password</string>
     <string name="panel_error_password_short">Password must be at least 8 characters</string>
 
+    <string name="title_remote_input">Remote Input</string>
+    <string name="summary_remote_input">Open the address below on a phone on the same Wi-Fi to enter your account and subscriptions remotely</string>
+    <string name="remote_input_status_label">Service status</string>
+    <string name="remote_input_status_running">Running</string>
+    <string name="remote_input_status_stopped">Not enabled</string>
+    <string name="remote_input_status_restart_needed">Service is not running; turn it off and on again</string>
+    <string name="remote_input_status_failed">Failed to start</string>
+    <string name="remote_input_status_failed_port">Failed to start: port in use</string>
+    <string name="remote_input_address_label">Access address</string>
+    <string name="remote_input_pairing_code_label">Pairing code</string>
+    <string name="notification_channel_remote_input">Remote Input</string>
+    <string name="notification_remote_input_title">Remote Input is running</string>
+    <string name="remote_input_pairing_title">Enter pairing code</string>
+    <string name="remote_input_pairing_hint">Enter the 6-digit pairing code shown on the TV</string>
+    <string name="remote_input_pairing_button">Pair</string>
+    <string name="remote_input_pairing_error">Wrong pairing code, please try again</string>
+    <string name="remote_input_pairing_success">Paired successfully</string>
+    <string name="remote_input_not_paired">Not paired yet, please enter the pairing code first</string>
+    <string name="remote_input_login_success">Login succeeded, the TV has been synced</string>
+    <string name="remote_input_already_logged_in">Already logged in</string>
+    <string name="remote_input_subscriptions_title">Subscriptions</string>
+    <string name="remote_input_sub_remarks">Remarks</string>
+    <string name="remote_input_sub_url">Subscription URL</string>
+    <string name="remote_input_sub_auto_update">Auto update</string>
+    <string name="remote_input_sub_interval">Update interval (minutes)</string>
+    <string name="remote_input_sub_add">Add subscription</string>
+    <string name="remote_input_sub_added">Subscription added</string>
+    <string name="remote_input_sub_invalid">Invalid form, please check remarks, URL and update interval</string>
+    <string name="remote_input_login_required">Please log in first</string>
+    <string name="remote_input_go_login">Go to login</string>
+    <string name="remote_input_internal_error">Internal error, please try again</string>
 </resources>

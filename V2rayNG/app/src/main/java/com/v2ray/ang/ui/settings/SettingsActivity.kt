@@ -10,12 +10,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -24,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -41,6 +45,7 @@ import com.v2ray.ang.handler.MmkvManager.rememberMmkvBool
 import com.v2ray.ang.handler.MmkvManager.rememberMmkvString
 import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.root.RootManager
+import com.v2ray.ang.service.RemoteInputService
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.CollapsiblePreferenceGroupHeader
@@ -113,6 +118,7 @@ fun SettingsScreen(
     var observatorySettingsExpanded by rememberSaveable { mutableStateOf(false) }
     var advancedSettingsExpanded by rememberSaveable { mutableStateOf(true) }
     var modeSettingsExpanded by rememberSaveable { mutableStateOf(true) }
+    var remoteInputExpanded by rememberSaveable { mutableStateOf(true) }
 
     var localDns by rememberMmkvBool(AppConfig.PREF_LOCAL_DNS_ENABLED, false)
     var fakeDns by rememberMmkvBool(AppConfig.PREF_FAKE_DNS_ENABLED, false)
@@ -177,6 +183,7 @@ fun SettingsScreen(
     var outboundResolveMethod by rememberMmkvString(AppConfig.PREF_OUTBOUND_DOMAIN_RESOLVE_METHOD, AppConfig.DEFAULT_OUTBOUND_DOMAIN_RESOLVE_METHOD)
 
     var isBooted by rememberMmkvBool(AppConfig.PREF_IS_BOOTED, false)
+    var remoteInputEnabled by rememberMmkvBool(AppConfig.PREF_REMOTE_INPUT_ENABLED, false)
     var delayTestUrl by rememberMmkvString(AppConfig.PREF_DELAY_TEST_URL, "")
     var realPingConcurrency by rememberMmkvString(AppConfig.PREF_REAL_PING_CONCURRENCY, "16")
     var ipApiUrl by rememberMmkvString(AppConfig.PREF_IP_API_URL, "")
@@ -194,6 +201,10 @@ fun SettingsScreen(
             ThemeManager.setDynamicColorEnabled(false)
         }
     }
+
+    val context = LocalContext.current
+    val isTelevision = remember(context) { RemoteInputService.isTelevision(context) }
+    val remoteInputState by RemoteInputService.state.collectAsStateWithLifecycle()
 
     val languageEntries = stringArrayResource(R.array.language_select).toList()
     val languageValues = stringArrayResource(R.array.language_select_value).toList()
@@ -301,6 +312,62 @@ fun SettingsScreen(
                         ThemeManager.setThemeMode(it)
                     }
                 )
+            }
+
+            if (isTelevision) {
+                CollapsiblePreferenceGroupHeader(
+                    title = stringResource(R.string.title_remote_input),
+                    expanded = remoteInputExpanded,
+                    onExpandedChange = { remoteInputExpanded = it }
+                )
+                if (remoteInputExpanded) {
+                    SettingsSwitchItem(
+                        title = stringResource(R.string.title_remote_input),
+                        summary = stringResource(R.string.summary_remote_input),
+                        checked = remoteInputEnabled,
+                        onCheckedChange = {
+                            remoteInputEnabled = it
+                            if (it) RemoteInputService.start(context)
+                            else RemoteInputService.stop(context)
+                        }
+                    )
+                    // 状态行只是信息展示（不可点击），遥控器焦点会自然跳过它们，
+                    // 只落在开关行上，不会把 v10 修好的焦点链弄断。
+                    when (val remoteState = remoteInputState) {
+                        is RemoteInputService.RemoteInputState.Running -> {
+                            RemoteInputInfoRow(
+                                label = stringResource(R.string.remote_input_status_label),
+                                value = stringResource(R.string.remote_input_status_running)
+                            )
+                            RemoteInputInfoRow(
+                                label = stringResource(R.string.remote_input_address_label),
+                                value = remoteState.address
+                            )
+                            RemoteInputInfoRow(
+                                label = stringResource(R.string.remote_input_pairing_code_label),
+                                value = remoteState.pairingCode
+                            )
+                        }
+                        is RemoteInputService.RemoteInputState.Failed -> {
+                            RemoteInputInfoRow(
+                                label = stringResource(R.string.remote_input_status_label),
+                                value = stringResource(
+                                    if (remoteState.portInUse) R.string.remote_input_status_failed_port
+                                    else R.string.remote_input_status_failed
+                                )
+                            )
+                        }
+                        is RemoteInputService.RemoteInputState.Stopped -> {
+                            RemoteInputInfoRow(
+                                label = stringResource(R.string.remote_input_status_label),
+                                value = stringResource(
+                                    if (remoteInputEnabled) R.string.remote_input_status_restart_needed
+                                    else R.string.remote_input_status_stopped
+                                )
+                            )
+                        }
+                    }
+                }
             }
 
             CollapsiblePreferenceGroupHeader(
@@ -719,5 +786,31 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(24.dp))
             NavigationBarsSpacer()
         }
+    }
+}
+
+/**
+ * 远程输入的状态信息行：纯展示，不可点击、不进焦点链。
+ * 内边距与字号与 SettingsItemRow 保持一致（16.dp、bodyLarge/titleMedium），
+ * 电视上 3 米外能看清地址与配对码。
+ */
+@Composable
+private fun RemoteInputInfoRow(label: String, value: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

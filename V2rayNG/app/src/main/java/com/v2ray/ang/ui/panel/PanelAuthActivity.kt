@@ -61,6 +61,30 @@ class PanelAuthActivity : BaseComponentActivity() {
                 }
             }
         }
+        lifecycleScope.launch {
+            // 远程登录完成信号：只起唤醒作用，收到后先确认登录态再跳转；
+            // 本地登录进行中（isBusy）时不触发，避免打断正在进行的订阅导入。
+            com.v2ray.ang.service.RemoteInputService.loginEvents.collect {
+                if (com.v2ray.ang.panel.PanelSession.isLoggedIn()
+                    && !viewModel.uiState.value.isBusy
+                ) {
+                    startActivity(Intent(this@PanelAuthActivity, com.v2ray.ang.ui.main.MainActivity::class.java))
+                    finish()
+                }
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 远程登录发生在应用切后台时：后台启动 Activity 可能被系统拦截，
+        // 回到前台时靠这里补一次跳转。本地登录进行中（isBusy 或 authDone）
+        // 时不触发，避免打断正在进行的订阅导入。
+        val state = viewModel.uiState.value
+        if (com.v2ray.ang.panel.PanelSession.isLoggedIn() && !state.isBusy && !state.authDone) {
+            startActivity(Intent(this, com.v2ray.ang.ui.main.MainActivity::class.java))
+            finish()
+        }
     }
 
     /**

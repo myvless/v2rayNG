@@ -571,4 +571,35 @@
     <string name="panel_error_empty">請填寫郵箱和密碼</string>
     <string name="panel_error_password_short">密碼至少 8 位</string>
 
+    <string name="title_remote_input">遠程輸入</string>
+    <string name="summary_remote_input">同 Wi-Fi 的手機打開下方地址，可遠程輸入帳號與訂閱</string>
+    <string name="remote_input_status_label">服務狀態</string>
+    <string name="remote_input_status_running">運行中</string>
+    <string name="remote_input_status_stopped">未開啟</string>
+    <string name="remote_input_status_restart_needed">服務未運行，請關閉後重新開啟</string>
+    <string name="remote_input_status_failed">啟動失敗</string>
+    <string name="remote_input_status_failed_port">啟動失敗：端口被佔用</string>
+    <string name="remote_input_address_label">訪問地址</string>
+    <string name="remote_input_pairing_code_label">配對碼</string>
+    <string name="notification_channel_remote_input">遠程輸入</string>
+    <string name="notification_remote_input_title">遠程輸入運行中</string>
+    <string name="remote_input_pairing_title">輸入配對碼</string>
+    <string name="remote_input_pairing_hint">請輸入電視上顯示的 6 位配對碼</string>
+    <string name="remote_input_pairing_button">配對</string>
+    <string name="remote_input_pairing_error">配對碼錯誤，請重新輸入</string>
+    <string name="remote_input_pairing_success">配對成功</string>
+    <string name="remote_input_not_paired">未配對，請先輸入配對碼</string>
+    <string name="remote_input_login_success">登錄成功，電視已同步跳轉</string>
+    <string name="remote_input_already_logged_in">已登錄</string>
+    <string name="remote_input_subscriptions_title">訂閱管理</string>
+    <string name="remote_input_sub_remarks">備註</string>
+    <string name="remote_input_sub_url">訂閱鏈接</string>
+    <string name="remote_input_sub_auto_update">自動更新</string>
+    <string name="remote_input_sub_interval">更新間隔（分鐘）</string>
+    <string name="remote_input_sub_add">添加訂閱</string>
+    <string name="remote_input_sub_added">訂閱已添加</string>
+    <string name="remote_input_sub_invalid">表單無效，請檢查備註、鏈接與更新間隔</string>
+    <string name="remote_input_login_required">請先登錄</string>
+    <string name="remote_input_go_login">去登錄</string>
+    <string name="remote_input_internal_error">服務內部錯誤，請重試</string>
 </resources>
