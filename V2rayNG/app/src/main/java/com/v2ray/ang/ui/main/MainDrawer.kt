@@ -21,8 +21,12 @@ import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -64,6 +68,14 @@ private val drawerItems = primaryDrawerItems
 @Composable
 fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) -> Unit) {
     val drawerScrollState = rememberScrollState()
+    // 电视遥控器：抽屉打开后焦点默认还留在原来的节点列表上，抽屉里的项按不到，
+    // 抽屉一打开就把焦点移到第一项（我的账户），菜单就能用方向键选了。
+    val firstItemFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(drawerState.isOpen) {
+        if (drawerState.isOpen) {
+            firstItemFocusRequester.requestFocus()
+        }
+    }
 
     ModalDrawerSheet(
         drawerState = drawerState,
@@ -112,7 +124,9 @@ fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) ->
                     selected = false,
                     onClick = { onNavigate(item) },
                     icon = { Icon(painterResource(item.iconRes), contentDescription = null) },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    modifier = Modifier
+                        .padding(NavigationDrawerItemDefaults.ItemPadding)
+                        .then(if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier)
                 )
             }
         }

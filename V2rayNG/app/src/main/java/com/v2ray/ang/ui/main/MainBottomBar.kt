@@ -27,6 +27,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
@@ -50,6 +53,9 @@ fun MainBottomBar(
 ) {
     val scope = rememberCoroutineScope()
     val rotationAnim = remember { Animatable(0f) }
+    // 电视遥控器：底部状态栏在开始按钮正下方，方向键“下”默认到不了悬空的开始按钮，
+    // 把状态栏的下方向显式指向开始按钮，列表→状态栏→开始按钮就能一路按下去。
+    val fabFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(isRunning) {
         if (!isRunning) {
@@ -62,6 +68,7 @@ fun MainBottomBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface)
+                .focusProperties { down = fabFocusRequester }
                 .clickable(onClick = { onAction(MainAction.TestCurrentServer) })
                 .windowInsetsPadding(WindowInsets.navigationBars)
         ) {
@@ -99,7 +106,8 @@ fun MainBottomBar(
                 .align(Alignment.TopEnd)
                 .padding(end = 24.dp)
                 .offset(y = (-28).dp)
-                .navigationBarsPadding(),
+                .navigationBarsPadding()
+                .focusRequester(fabFocusRequester),
             containerColor = if (isRunning) colorFabActive
             else if (isDarkTheme) colorFabInactiveDark
             else colorFabInactiveLight
