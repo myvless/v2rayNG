@@ -366,6 +366,10 @@ fun SettingsScreen(
                                 )
                             )
                         }
+                        // RemoteInputState 只有 Running/Failed/Stopped 三种子类型，均已覆盖；
+                        // else 分支仅用于满足 Kotlin 穷尽性检查（CI 报 NO_ELSE_IN_WHEN），不可达。
+                        else -> {
+                        }
                     }
                 }
             }
