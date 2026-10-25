@@ -37,18 +37,18 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class RemoteInputService : Service() {
 
+    /** 服务对外状态：设置页订阅它来显示运行状态、地址与配对码。 */
+    sealed interface RemoteInputState {
+        data object Stopped : RemoteInputState
+        data class Running(val address: String, val pairingCode: String) : RemoteInputState
+        data class Failed(val portInUse: Boolean) : RemoteInputState
+    }
+
     companion object {
         private const val TAG = "RemoteInputService"
 
         /** 远程输入端口（与方案一致，默认 12346；被占用时明示失败，不自动换端口）。 */
         const val PORT = 12346
-
-        /** 服务对外状态：设置页订阅它来显示运行状态、地址与配对码。 */
-        sealed interface RemoteInputState {
-            data object Stopped : RemoteInputState
-            data class Running(val address: String, val pairingCode: String) : RemoteInputState
-            data class Failed(val portInUse: Boolean) : RemoteInputState
-        }
 
         private val _state = MutableStateFlow<RemoteInputState>(RemoteInputState.Stopped)
         val state: StateFlow<RemoteInputState> = _state.asStateFlow()
