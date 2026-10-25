@@ -292,6 +292,16 @@
                 android:value="test" />
         </service>
 
+        <service
+            android:name=".service.RemoteInputService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:label="@string/app_name">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="remote-input" />
+        </service>
+
         <receiver
             android:name=".receiver.WidgetProvider"
             android:exported="true"
