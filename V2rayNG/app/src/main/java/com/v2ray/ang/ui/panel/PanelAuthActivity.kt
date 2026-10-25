@@ -21,12 +21,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -103,23 +100,8 @@ class PanelAuthActivity : BaseComponentActivity() {
     @Composable
     override fun ScreenContent() {
         val state by viewModel.uiState.collectAsStateWithLifecycle()
-        val snackbarHostState = remember { SnackbarHostState() }
 
-        state.errorMessage?.let { msg ->
-            val display = when (msg) {
-                "empty_input" -> stringResource(R.string.panel_error_empty)
-                "password_too_short" -> stringResource(R.string.panel_error_password_short)
-                else -> msg
-            }
-            LaunchedEffect(msg) {
-                snackbarHostState.showSnackbar(display)
-                viewModel.clearError()
-            }
-        }
-
-        Scaffold(
-            snackbarHost = { SnackbarHost(snackbarHostState) }
-        ) { innerPadding ->
+        Scaffold { innerPadding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -169,6 +151,22 @@ class PanelAuthActivity : BaseComponentActivity() {
                         onValueChange = { inviteCode = it },
                         label = { Text(stringResource(R.string.panel_invite_code)) },
                         singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                // 登录/注册失败时常驻显示错误文案：之前只用短时 Snackbar，
+                // 软键盘展开时会把它挡在后面，用户看不到任何提示。
+                state.errorMessage?.let { msg ->
+                    val display = when (msg) {
+                        "empty_input" -> stringResource(R.string.panel_error_empty)
+                        "password_too_short" -> stringResource(R.string.panel_error_password_short)
+                        else -> msg
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = display,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
