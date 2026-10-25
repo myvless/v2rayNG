@@ -33,10 +33,6 @@ class PanelAuthViewModel(application: Application) : BaseViewModel(application) 
         _uiState.value = _uiState.value.copy(isRegisterMode = toRegister, errorMessage = null)
     }
 
-    fun clearError() {
-        _uiState.value = _uiState.value.copy(errorMessage = null)
-    }
-
     fun submit(email: String, password: String, inviteCode: String) {
         val state = _uiState.value
         if (state.isBusy) return
