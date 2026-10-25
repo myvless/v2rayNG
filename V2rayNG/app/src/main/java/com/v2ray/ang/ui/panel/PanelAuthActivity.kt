@@ -18,6 +18,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -30,14 +31,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.handler.MmkvManager.rememberMmkvBool
+import com.v2ray.ang.service.RemoteInputService
 import com.v2ray.ang.ui.base.BaseComponentActivity
+import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -124,6 +130,15 @@ class PanelAuthActivity : BaseComponentActivity() {
     @Composable
     override fun ScreenContent() {
         val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+        // 电视专用的远程输入入口：未登录时应用直接进本页，按返回键是退到系统桌面，
+        // 根本到不了主界面和设置页，所以开关必须也在这里。门控与设置页一致：
+        // 只在电视上渲染，非电视设备永不显示、永不启动。开关状态与设置页共用
+        // 同一 MMKV 键，两边看到的是同一个开关。
+        val context = LocalContext.current
+        val isTelevision = remember(context) { RemoteInputService.isTelevision(context) }
+        var remoteInputEnabled by rememberMmkvBool(AppConfig.PREF_REMOTE_INPUT_ENABLED, false)
+        val remoteInputState by RemoteInputService.state.collectAsStateWithLifecycle()
 
         Scaffold { innerPadding ->
             Column(
@@ -228,7 +243,90 @@ class PanelAuthActivity : BaseComponentActivity() {
                         )
                     }
                 }
+
+                // 电视专用的远程输入区域：放在登录/注册 UI 下方，用分隔线独立分隔。
+                // 只在电视上渲染；手机上本段代码不执行，UI 无任何改变。
+                if (isTelevision) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(8.dp))
+                    SettingsSwitchItem(
+                        title = stringResource(R.string.title_remote_input),
+                        summary = stringResource(R.string.summary_remote_input),
+                        checked = remoteInputEnabled,
+                        onCheckedChange = {
+                            remoteInputEnabled = it
+                            if (it) RemoteInputService.start(context)
+                            else RemoteInputService.stop(context)
+                        }
+                    )
+                    // 状态行只是信息展示（不可点击），与设置页一致，遥控器焦点只落在开关行上。
+                    when (val remoteState = remoteInputState) {
+                        is RemoteInputService.RemoteInputState.Running -> {
+                            RemoteInputInfoRow(
+                                label = stringResource(R.string.remote_input_status_label),
+                                value = stringResource(R.string.remote_input_status_running)
+                            )
+                            RemoteInputInfoRow(
+                                label = stringResource(R.string.remote_input_address_label),
+                                value = remoteState.address
+                            )
+                            RemoteInputInfoRow(
+                                label = stringResource(R.string.remote_input_pairing_code_label),
+                                value = remoteState.pairingCode
+                            )
+                        }
+                        is RemoteInputService.RemoteInputState.Failed -> {
+                            RemoteInputInfoRow(
+                                label = stringResource(R.string.remote_input_status_label),
+                                value = stringResource(
+                                    if (remoteState.portInUse) R.string.remote_input_status_failed_port
+                                    else R.string.remote_input_status_failed
+                                )
+                            )
+                        }
+                        is RemoteInputService.RemoteInputState.Stopped -> {
+                            RemoteInputInfoRow(
+                                label = stringResource(R.string.remote_input_status_label),
+                                value = stringResource(
+                                    if (remoteInputEnabled) R.string.remote_input_status_restart_needed
+                                    else R.string.remote_input_status_stopped
+                                )
+                            )
+                        }
+                        // RemoteInputState 只有 Running/Failed/Stopped 三种子类型，均已覆盖；
+                        // else 分支仅用于满足 Kotlin 穷尽性检查，不可达（与设置页一致）。
+                        else -> {
+                        }
+                    }
+                }
             }
         }
+    }
+}
+
+/**
+ * 远程输入的状态信息行：纯展示，不可点击、不进焦点链。
+ * 与设置页的同名行一致（内边距 16.dp、bodyLarge/titleMedium），
+ * 电视上 3 米外能看清地址与配对码。
+ */
+@Composable
+private fun RemoteInputInfoRow(label: String, value: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
