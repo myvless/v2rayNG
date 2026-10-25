@@ -83,6 +83,13 @@ object PanelApi {
     }
 
     /**
+     * 失败消息归一化：面板偶尔返回空 msg 时，空串会让界面提示不可见，
+     * 在此统一回落到默认文案，保证 Failure 一定携带可见消息。
+     */
+    internal fun failureMessage(msg: String?, defaultMessage: String): String =
+        if (msg.isNullOrBlank()) defaultMessage else msg
+
+    /**
      * 登录面板
      * POST /auth/login {email, password, remember_me}
      * 成功：返回 HX-Redirect 头；失败：JSON {ret:0, msg}
@@ -107,7 +114,7 @@ object PanelApi {
                     return@withContext ApiResult.Success()
                 }
                 val msg = try {
-                    JSONObject(respBody).optString("msg", "登录失败")
+                    failureMessage(JSONObject(respBody).optString("msg"), "登录失败")
                 } catch (_: Exception) {
                     "登录失败 (${resp.code})"
                 }
@@ -149,7 +156,7 @@ object PanelApi {
                     return@withContext ApiResult.Success()
                 }
                 val msg = try {
-                    JSONObject(respBody).optString("msg", "注册失败")
+                    failureMessage(JSONObject(respBody).optString("msg"), "注册失败")
                 } catch (_: Exception) {
                     "注册失败 (${resp.code})"
                 }
