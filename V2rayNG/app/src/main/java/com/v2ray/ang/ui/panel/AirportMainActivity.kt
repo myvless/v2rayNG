@@ -101,8 +101,9 @@ class AirportMainActivity : com.v2ray.ang.ui.base.HelperBaseComponentActivity() 
 
     @Composable
     override fun ScreenContent() {
-        BackHandler { moveTaskToBack(false) }
         val state by viewModel.uiState.collectAsStateWithLifecycle()
+        // 未连接时返回键真正退出；连接中则回后台以保持隧道不断
+        BackHandler { if (state.isRunning) moveTaskToBack(false) else finish() }
         val snackbarHostState = remember { SnackbarHostState() }
         var tabIndex by remember { mutableIntStateOf(0) }
 
@@ -150,7 +151,10 @@ class AirportMainActivity : com.v2ray.ang.ui.base.HelperBaseComponentActivity() 
                         onLogout = {
                             viewModel.logout {
                                 LauncherManager.stopService(this@AirportMainActivity)
-                                startActivity(Intent(this@AirportMainActivity, PanelAuthActivity::class.java))
+                                val intent = Intent(this@AirportMainActivity, PanelAuthActivity::class.java).apply {
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                }
+                                startActivity(intent)
                                 finish()
                             }
                         }
