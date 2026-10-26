@@ -1,5 +1,6 @@
 package com.v2ray.ang.ui.panel
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.v2ray.ang.core.LauncherManager
 import com.v2ray.ang.ui.base.BaseComponentActivity
 
 class PanelAccountActivity : BaseComponentActivity() {
@@ -42,7 +44,6 @@ class PanelAccountActivity : BaseComponentActivity() {
             Spacer(modifier = Modifier.height(12.dp))
             Text(state.email.ifBlank { "已登录" }, style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(16.dp))
-
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("账户详情", style = MaterialTheme.typography.titleSmall)
@@ -77,7 +78,16 @@ class PanelAccountActivity : BaseComponentActivity() {
             }
             Spacer(modifier = Modifier.height(24.dp))
             OutlinedButton(
-                onClick = { viewModel.logout { finish() } },
+                onClick = {
+                    viewModel.logout {
+                        LauncherManager.stopService(this@PanelAccountActivity)
+                        val intent = Intent(this@PanelAccountActivity, PanelAuthActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        }
+                        startActivity(intent)
+                        finish()
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("退出登录")
