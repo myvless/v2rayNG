@@ -86,6 +86,8 @@ data class V2rayConfig(
             var id: String? = null,
             var security: String? = null,
             var encryption: String? = null,
+            /*VMess: packet encoding, none = legacy framing all servers understand*/
+            var packetEncoding: String? = null,
             /*VLESS*/
             var flow: String? = null,
             /*Trojan/Shadowsocks*/
