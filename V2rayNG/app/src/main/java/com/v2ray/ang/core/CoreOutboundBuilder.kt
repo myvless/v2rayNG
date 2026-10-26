@@ -123,6 +123,10 @@ object CoreOutboundBuilder {
             settings.id = profileItem.password.orEmpty()
             settings.security = profileItem.method
             settings.level = AppConfig.DEFAULT_LEVEL
+            // 固定用 none：新版核心默认的 packetaddr 老服务端（如香港 XrayR）认不出，
+            // 握手能过但数据传不过去；none 是所有服务端都兼容的老格式。
+            // 待香港老 XrayR 节点退役（迁到 heki 后）可移除，恢复核心默认。
+            settings.packetEncoding = "none"
         }
 
         val sni = outboundBean?.streamSettings?.let {
